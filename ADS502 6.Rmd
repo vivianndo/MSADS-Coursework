@@ -1,0 +1,76 @@
+### VIVIAN DO
+### ADS502 Assignment 6
+### November 30th, 2022
+
+### Data Science Using Python and R: Chapter 10 - Page 149: Questions #11, 12, 13, & 14
+
+**For the following exercises, work with the white_wine_training and white_wine_test data sets.**
+```{r}
+#import data sets
+wine_train <- read.csv("~/Desktop/MSADS/ADS502/white_wine_training")
+wine_test <- read.csv("~/Desktop/MSADS/ADS502/white_wine_test")
+
+#show first 5 observations of training set
+head(wine_train,5)
+```
+```{r}
+#show first 5 observations of test set
+head(wine_test,5)
+```
+**11) Input and standardize both the training and test data sets**
+```{r}
+#subset predictor variables into their own matrix
+X <- subset(wine_train, select = c("alcohol", "sugar"))
+X_test <- subset(wine_test, select = c("alcohol", "sugar"))
+
+#standardize predictor variables and save the output as a dataframe
+Xs <- as.data.frame(scale(X))
+colnames(Xs) <- c("alcohol_z", "sugar_z")
+
+Xs_test <- as.data.frame(scale(X_test))
+colnames(Xs_test) <- c("alcohol_z", "sugar_z")
+```
+
+**12) Run k-means clustering on the training data set, using two clusters**
+```{r}
+#run k-means clustering with 2 clusters
+kmeans01 <- kmeans(Xs, centers=2)
+
+#save cluster membership as new variable 'cluster' and convert to factors
+cluster <- as.factor(kmeans01$cluster)
+
+#separate records into two groups based on their cluster
+Cluster1 <- Xs[ which(cluster == 1), ]
+Cluster2 <- Xs[ which(cluster == 2), ]
+```
+
+**13) Give the mean of each variable within each cluster and use the means to identify a "Dry wines" and a "Sweet wines" cluster**
+```{r}
+#show summary statistics for cluster 1 of the training set
+summary(Cluster1)
+```
+```{r}
+#show summary statistics for cluster 2 of the training set
+summary(Cluster2)
+```
+
+**14) Validate the clustering results by running k-means clustering on the test data set, using two clusters, and identifying a "Dry wines" and a "Sweet wines" cluster**
+```{r}
+#run k-means clustering with 2 clusters on the test set
+kmeans02 <- kmeans(Xs_test, centers=2)
+
+#save cluster membership as new variable 'cluster' and convert to factors
+cluster_test <- as.factor(kmeans02$cluster)
+
+#separate records into two groups based on their cluster
+Cluster1_test <- Xs_test[ which(cluster == 1), ]
+Cluster2_test <- Xs_test[ which(cluster == 2), ]
+
+#show summary statistics for cluster 1 of the test set
+summary(Cluster1_test)
+```
+```{r}
+#show summary statistics for cluster 2 of the test set
+summary(Cluster2_test)
+```
+```

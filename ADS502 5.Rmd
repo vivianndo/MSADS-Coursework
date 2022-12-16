@@ -1,0 +1,168 @@
+### Vivian Do
+### ADS502 Assignment 5
+### November 29th, 2022
+
+### Data Science Using Python and R: Chapter 14 - Page 211: Questions #11, 12, 13, 14, & 15
+
+
+**For the following exercises, work with the Churn_Training_File data set**
+```{r}
+#import data set
+churn <- read.csv(file="Churn_Training_File")
+head(churn,5)
+```
+```{r}
+#check the number of records in data set
+dim(churn)
+```
+
+The data set has 21 attributes and 3000 records. 
+
+
+**11) Subset the variables Vmail Plan, Int'l Plan, CustServ Calls, and Churn into their own dataframe. Change CustServ Calls into an ordered factor**
+```{r}
+#subset variables of interest into new dataframe using the subset() command
+min.churn <- subset(churn, select = c("VMail.Plan", "Intl.Plan", "CustServ.Calls", "Churn"))
+
+#change CustServ.Calls into an ordered factor
+min.churn$CustServ.Calls <- ordered(as.factor(min.churn$CustServ.Calls))
+```
+The as.factor() command takes the CustServ.Calls variable and makes a factor of the different values. The variables are treated as nominal. The ordered() command changes the levels to ordinal, set in ascending order. 
+
+
+**12) Create tables for each of the four variables. Include both counts and proportions in each table. Use the tables to discuss the 'baseline' distribution of each variable**
+
+
+Tables are used to obtain the baseline distributions of the variables. A table for each variable will be created to show the count and proportion. The table() command will be used to create a table of counts and the prop.table() command will be used to create a table of proportions. rbind() creates a matrix with the counts and proportions together. 
+
+
+*CustServ.Calls*
+```{r}
+#create matrix of counts and proportions
+t1 <- table(min.churn$CustServ.Calls)
+t11 <- rbind(t1, round(prop.table(t1), 4))
+
+#add column and row names to make table more readable
+colnames(t11) <- c("CustServ.Calls=0","CustServ.Calls=1","CustServ.Calls=2","CustServ.Calls=3","CustServ.Calls=4", "CustServ.Calls=5", "CustServ.Calls=6", "CustServ.Calls=7", "CustServ.Calls=8", "CustServ.Calls=9")
+rownames(t11) <-c("Count", "Proportions")
+t11
+```
+
+The baseline distribution for CustServ.Calls is 20.9% 0 (n=626), 35.6% 1 (n=1068), 22.6% 2 (n=679), 12.8% 3 (n=383), 5.0% 4 (n=149), 2.0% 5 (n=61), and <1% for 6 (n=22), 7 (n=8), 8 (n=2), and 9 (n=2). 
+
+*VMail.Plan*
+```{r}
+#create matrix of counts and proportions
+t2 <- table(min.churn$VMail.Plan)
+t22 <- rbind(t2, round(prop.table(t2), 4))
+
+#add column and row names to make table more readable
+colnames(t22) <- c("VMail.Plan=no", "VMail.Plan=yes")
+rownames(t22) <-c("Count", "Proportions")
+t22
+```
+
+The baseline distribution for VMail.Plan is 72.3% no (n=2170) and 27.7% yes (n=830).
+
+*Intl.Plan*
+```{r}
+#create matrix of counts and proportions
+t3 <- table(min.churn$Intl.Plan)
+t33 <- rbind(t3, round(prop.table(t3), 4))
+
+#add column and row names to make table more readable
+colnames(t33) <- c("Intl.Plan=no", "Intl.Plan=yes")
+rownames(t33) <-c("Count", "Proportions")
+t33
+```
+
+The baseline distribution for Intl.Plan is 90.2% no (n=2705) and 9.8% yes (n=295).
+
+*Churn*
+```{r}
+#create matrix of counts and proportions
+t4 <- table(min.churn$Churn)
+t44 <- rbind(t4, round(prop.table(t4), 4))
+
+#add column and row names to make table more readable
+colnames(t44) <- c("Churn=False", "Churn=True")
+rownames(t44) <-c("Count", "Proportions")
+t44
+```
+
+The baseline distribution for Churn is 85.5% False (n=2564) and 14.5% True (n=426).
+
+**13) Obtain the association rules using the settings outlined in Section 14.4**
+
+Association rules are obtained from the apriori() command from the arules package. Rules will be generated using the following settings:
+  a) Specify the type of associations to obtain as rules (target) 
+    
+  b) Minimum support (supp) is equal to 0.01 (1%)
+    
+  c) Minimum confidence (conf) is equal to 0.4 (40%)
+    
+  d) Maximum number of antecedents is 1 (minlen=2, maxlen=2)
+
+```{r}
+#load arules package
+library(arules)
+
+#run apriori() command and specify parameter settings
+#minlen and maxlen are set to 2 to specify that we want antecedents with exactly one item, since a rule with an empty antecedent is considered to have a length of one
+all.rules <- apriori (data=min.churn, parameter= list(supp=0.01, target = "rules", conf=0.4,
+                                                      minlen=2, maxlen=2))
+
+#show the top 10 rules, sorted by descending lift values
+inspect(head(all.rules, by ="lift", n=10))
+```
+
+**14) Subset the rules from the previous exercises so none of the antecedents contain the Churn variable. Display the rules, sorted by descending lift value**
+
+First we need to identify which rules have Churn in the antecedent, lhs. The apriori() command does not return the output formatted as a dataframe. To work with lhs, we need to first convert it to a dataframe using the as() command.
+
+  a) The core code, attr(all.rules, "lhs"), specifies that we are working with the    antecedents (lhs) of the rules contained in all.rules
+    
+  b) The first as() command adds the additional input "transactions" that changes the     antecedents into a format specific to the arules() package
+  
+  c) Objects of type transactions can be transformed to a dataframe format using the second input value "data.frame" of the second as() command
+    
+```{r}
+#convert antecedents (lhs) into dataframe
+all.rules.ant.df <- as(as(attr(all.rules, "lhs"), "transactions"), "data.frame")
+
+#examine which rules have Churn=True or Churn=False
+ta <- all.rules.ant.df$items == "{Churn=True}"
+tb <- all.rules.ant.df$items == "{Churn=False}"
+non.churn.ant <- abs(ta+tb-1)
+```
+
+The vectors ta and tb are a series of zeros and ones that indicate whether the antecedent met the condition (1) or not (0). Taking the absolute value using the abs() command results in a single vector of zeros and ones where the ones indicate antecedents that do not meet the condition (do not contain Churn). We save this binary vector as non.churn.ant.
+
+To subset only the rules that do not contain Churn in the antecedent, we subset those that have non.churn.ant equal to 1. 
+```{r}
+#subset rules
+good.rules <- all.rules[non.churn.ant == 1]
+
+#sort by descending lift values
+inspect(head(good.rules, by="lift", n=28))
+```
+
+**15) Obtain association rule using the confidence difference criterion outlined in Section 14.6**
+
+The confidence difference criterion is evaluated by taking the absolute difference between the prior probability of consequent (here, churn status) and the confidence of the rule. In our example, rules would only be included if: 
+
+|*Prior probability of consequent* - *Rule confidence*| >= 0.40. 
+
+```{r}
+#use apriori() command and include the confidence difference criterion in parameter settings
+rules.confdiff <- apriori (data=min.churn, parameter=list(arem="diff", aval=TRUE,
+                                                          minval=0.4, supp=0.01,
+                                                          target="rules", conf=0.05,
+                                                          minlen=2, maxlen=2))
+
+#to view new rules
+inspect(head(rules.confdiff, by="lift", n=10))
+```
+
+The confidence difference can give an indication of which rules deviate from random selection and help weed out obvious rules that have a similar confidence as the prior probability of the consequent. For example, by randomly selecting a transaction from the data, the probability of obtaining a churning customer is 0.14533. If the rule generated gives a confidence measure that is not far from 0.14533, the rule is probably not subjectively interesting and random selection might as well have been used. 
+

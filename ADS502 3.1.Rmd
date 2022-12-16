@@ -1,0 +1,261 @@
+---
+title: "ADS502 Assignment 3.1"
+author: "Vivian Do"
+date: "2022-11-15"
+output: html_document
+---
+### Data Science Using Python and R: Chapter 5 - Page 78: Questions #28, 29, 30, 31, 32, 33, & 34
+
+For exercises 28-34, work with the churn data set.
+```{r}
+churn <- read.csv(file='churn')
+head(churn, 5)
+```
+
+28) Partition the data set, so that 67% of the records are included in the training data set and 33% are included in the test data set. Use a bar graph to confirm your proportions. 
+```{r}
+#set random number generator
+set.seed(7)
+
+#identify how many records are in the data set
+n <-dim(churn)[1]
+
+#determine which records will be in the training data set via a random seed generator
+train_ind <- runif(n) < 0.67
+churn_train <- churn[ train_ind, ]
+churn_test <- churn[ !train_ind, ]
+```
+```{r}
+#show churn proportions in training set
+library(ggplot2)
+ggplot(churn_train, aes(Churn)) + geom_bar()
+```
+```{r}
+#show churn proportions in test set
+library(ggplot2)
+ggplot(churn_test, aes(Churn)) + geom_bar()
+```
+29) Identify the total number of records in the training data set and how many records in the training data set have a churn value of true. 
+```{r}
+nrow(churn_train)
+table(churn_train$Churn)
+```
+There are 2227 records in the training set, with 1901 records having a churn value of False, and 325 records having a churn value of True. 
+
+30) Use your answers from the previous exercise to calculate how many true churn records you need to resample in order to have 20% of the rebalanced data set have true churn values. 
+
+Currently, there are 2227 records in the training data set, with 325 true churn records. To find the number of true churn records (x) we need to resample to have 20% true churn, we use the following equation: 
+
+ x = [p(records)-rare]/(1-p), where p=0.20, records=2227, rare=325.
+ 
+ We need to resample 151 records. 
+ 
+31) Perform the rebalancing described in the previous exercise and confirm that 20% of the records in the rebalanced data set have true churn values.
+```{r}
+#resample to get 20% true churn values in training set
+to.resample <- which(churn_train$Churn == "True")
+our.resample <- sample(x = to.resample, size = 151, replace = TRUE)
+our.resample <- churn_train[our.resample, ]
+churn_train_rebal <- rbind(churn_train, our.resample)
+
+#confirm 
+t.v1 <- table(churn_train_rebal$Churn)
+t.v2 <- rbind(t.v1, round(prop.table(t.v1), 4))
+colnames(t.v2) <- c("Churn:False", "Churn:True");
+rownames(t.v2) <- c("Count", "Proportion")
+t.v2
+```
+
+### Data Science Using Python and R: Chapter 7 - Page 109: Questions #23, 24, 25, 26, 27, 28, 29, & 30
+
+For the following exercises, work with the adult_ch6_training and adult_ch6_test data sets. 
+```{r}
+adult_ch6_test <- read.csv(file = 'adult_ch6_test')
+adult_ch6_training <- read.csv(file = 'adult_ch6_training')
+```
+
+23) Using the training data set, create a C5.0 model (Model 1) to predict a customer's Income using Marital Status and Capital Gains and Losses. Obtain the predicted responses.
+```{r}
+#change categorical variables to factors
+adult_ch6_training$Income <- factor(adult_ch6_training$Income)
+adult_ch6_training$Marital.status <- factor(adult_ch6_training$Marital.status)
+
+#load necessary packages
+library(C50)
+
+#build C5.0 model
+C5 <- C5.0(formula = Income ~ Marital.status + Cap_Gains_Losses, data = adult_ch6_training,
+           control = C5.0Control(minCases=75))
+
+#visualize tree
+plot(C5)
+```
+
+```{r}
+#create new dataframe with predictor variables that we wish to classify
+X = data.frame(Marital.status = adult_ch6_training$Marital.status, Cap_Gains_Losses = adult_ch6_training$Cap_Gains_Losses)
+
+#save predictions
+#predict(object = C5, newdata = X)
+```
+
+24) Evaluate Model 1 using the test data set. Construct a contingency table to compare the actual and predicted values of Income.
+```{r}
+#subset predictor variables from test dataset into their own dataframe
+test.X <-subset (x=adult_ch6_test, select = c("Marital.status", "Cap_Gains_Losses"))
+
+#run test data through the training data model
+ypred <-predict(object = C5, newdata = test.X)
+
+#create contingency table showing actual and predicted values
+t1 <- table(adult_ch6_test$Income, ypred)
+row.names(t1) <- c("Actual: <=50K" , "Actual: >50K")
+colnames(t1) <- c("Predicted: <=50K", "Predicted: >50K")
+t1 <- addmargins(A = t1, FUN = list(Total = sum), quiet = TRUE)
+t1
+```
+25) For Model 1, recapitulate Table 7.4 from the text, calculating all of the model evaluation measures shown in the table. Call this table the Model Evaluation Table. Leave space for Model 2. 
+
+For this model, we assign an income of <=50K as negative and >50K as positive. 
+
+Accuracy = (TN + TP)/GT = (4632+376)/6155=0.81
+
+Error rate = 1- Accuracy = 0.19
+
+Sensitivity = TP/TAP = 376/1481 = .25
+
+Specificity = TN/TAN = 4632/4674 = .99
+
+Precision = TP/TPP = 376/418 = .90
+
+F1 = 2[(Precision x Recall)/(Precision + Recall)] = .39
+
+F2 = 5[(Precision x Recall)/(4 x Precision + Recall)] = .29
+
+F0.5 = 1.25[(Precision x Recall)/(0.25 x Precision + Recall)] = .59
+
+26) Clearly and completely interpret each of the Model 1 evaluation measures from the Model Evaluation Table.
+
+Model 1 has an accuracy of 81%, which is higher than the baseline All Negative Model, which has an accuracy of 4674/6155=76%. 
+
+The error rate of 19% is quite high, meaning that the model incorrectly predicts income 19% of the time. 
+
+The model's sensitivity of 25% means that the model correctly identifies positive cases (>50K) only a quarter of the time. 
+
+A specificity of 99% means that the model was able to correctly identify most of the negative cases (individuals with an income of <=50k). Comparing specificity and sensitivity, we can see that the model is better at predicting cases of <=50K income compared to cases with >50k income. 
+
+A precision of 90% means that the model correctly identified 90% of cases with an income of >50K. 
+
+F1 is the harmonic mean of precision and recall. F2 is a measure that combines precision and recall, with recall having a higher weight.F0.5 is a measure that combines precision and recall, with precision having a higher weight. Since our model had a much higher precision (90%) compared to recall (25%),  F0.5 > F1 > F2. 
+
+27) Create a cost matrix, called the 3x cost matrix, that specifies a false negative is three times as bad as a false positive.  
+```{r}
+#create cost matrix
+cost.C5 <- matrix(c(0,1,3,0), byrow = TRUE, ncol=2)
+cost.C5
+```
+28) Using the training data set, build a C5.0 model (Model 2) to predict a customer's Income using Marital Status and Capital Gains and Losses, using the 3x cost matrix.
+```{r}
+#run C5.0 model with cost matrix
+C5.costs <- C5.0(Income ~ Marital.status + Cap_Gains_Losses, data = adult_ch6_training, costs = cost.C5)
+plot(C5.costs)
+```
+
+
+
+29) Evaluate your predictions from Model 2 using the actual response values from the test data set. Add Overall Model Cost and Profit per Customer to the Model Evaluation Table. Calculate all the measures from the Model Evaluation Table.
+```{r}
+#subset predictor variables from test dataset into their own dataframe
+test.X <-subset (x=adult_ch6_test, select = c("Marital.status", "Cap_Gains_Losses"))
+
+#run test data through the training data model
+ypred <-predict(object = C5.costs, newdata = test.X)
+
+#create contingency table showing actual and predicted values
+t2 <- table(adult_ch6_test$Income, ypred)
+row.names(t2) <- c("Actual: <=50K" , "Actual: >50K")
+colnames(t2) <- c("Predicted: <=50K", "Predicted: >50K")
+t2 <- addmargins(A = t2, FUN = list(Total = sum), quiet = TRUE)
+t2
+```
+For this model, we assign an income of <=50K as negative and >50K as positive. 
+Accuracy = (TN + TP)/GT = (4670+424)/6155=0.83
+
+Error rate = 1- Accuracy = 0.17
+
+Sensitivity = TP/TAP = 424/1481 = .29
+
+Specificity = TN/TAN = 4670/4674 = .999
+
+Precision = TP/TPP = 424/428 = .99
+
+F1 = 2[(Precision*Recall)/(Precision+Recall)] = .45
+
+F2 = [(5*Precision*Recall)/(4*Precision+Recall)] = .34
+
+F0.5 = [(1.25*Precision*Recall)/(0.25*Precision+Recall)] = .67
+
+Model Cost per Record and Model Profit Per Record
+Model 1
+Overall Model Cost = (FN*Cost_FN) + (FP*Cost_FP) = (1105*3) + (42*1) = $3357
+Model Cost per Record = Overall Model Cost/GT = $3357/6155 = $0.55
+Model Profit per Record = -Model Cost per Record = -$.055
+
+Model 2
+Overall Model Cost = (FN*Cost_FN) + (FP*Cost_FP) = (1057*3) + (4*1) = $3175
+Model Cost per Record = Overall Model Cost/GT = $3175/6155 = $0.52
+Model Profit per Record = -Model Cost per Record = -$0.52
+
+30) Compare the evaluation measures from Model 1 and Model 2 using the 3x cost matrix. Discuss the strengths and weaknesses of each model. 
+
+
+### Data Science Using Python and R: Chapter 8 - Page 126: Questions #31, 32, 33, & 34
+For the following exercises, work with the framingham_nb_training and framingham_nb_test data sets. 
+```{r}
+fram_train <- read.csv('framingham_nb_training.csv')
+fram_test <- read.csv('framingham_nb_test.csv')
+head(fram_train, 5)
+```
+31) Run the Naive Bayes classifier to classify persons as living or dead based on sex and education.
+```{r}
+#create contingency table of Sex vs. Death
+ta <- table(fram_train$Death, fram_train$Sex)
+colnames(ta) <-c("Sex=1", "Sex=2")
+rownames(ta) <-c("Death=0", "Death=1")
+addmargins(A = ta, FUN = list(Total=sum), quiet = TRUE)
+```
+```{r}
+#create contingency table of Educ vs. Death
+tb <- table(fram_train$Death, fram_train$Educ)
+colnames(tb) <-c("Educ=1", "Educ=2", "Educ=3", "Educ=4")
+rownames(tb) <-c("Death=0", "Death=1")
+addmargins(A = tb, FUN = list(Total=sum), quiet = TRUE)
+```
+```{r}
+#run naive Bayes estimator
+library(e1071)
+nb01 <- naiveBayes(formula=Death~Sex+Educ, data=fram_train)
+nb01
+```
+32) Evaluate the Naive Bayes model on the framingham_nb_test data set. Display the results in a contingency table. Edit the row and column names of the table to make the table more readable. Include a total row and column. 
+```{r}
+#use Naive Bayes model to make predictions for test data set
+ypred <- predict(object = nb01, newdata = fram_test)
+
+#create contingency table of actual vs. predicted deaths
+t.preds <- table(fram_test$Death, ypred)
+rownames(t.preds) <- c("Actual:0", "Actual:1")
+colnames(t.preds) <-c("Predicted:0", "Predicted:1")
+addmargins(A= t.preds, FUN = list(Total=sum), quiet=TRUE)
+```
+33) According to your table in the previous exercise, find the following values for the Naive Bayes model: 
+
+    a) Accuracy = (TN + TP)/GT = (203+370)/1000 = .573 (or 57.3%)
+    
+    b) Error rate = 1 - Accuracy = .427 (or 42.7%)
+34) According to your contingency table, find the following values for the Naive Bayes model: 
+
+    a) How often it correctly classifies dead persons: This is a measure of sensitivity, which is TP/Total Positives = 370/475 = .78
+    
+    
+    b) How often it correctly classifies living persons: This is a measure of specificity, which is TN/Total Negatives = 203/525 =.39
