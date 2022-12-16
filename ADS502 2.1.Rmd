@@ -1,0 +1,171 @@
+### Vivian Do
+### ADS502 Assignment 2.1
+
+### Data Science Using Python and R: Chapter 4 #21,22,23,24,25. Use the bank_marketing_training data set. 
+
+Read in the bank_marketing_training data set as bank_train
+```{r}
+bank_train <- read.csv(file = 'bank_marketing_training')
+head(bank_train,5)
+```
+
+Install and load in ggplot2
+```{r}
+library(ggplot2)
+```
+
+21a) bar graph of marital
+```{r}
+ggplot(bank_train, aes(marital)) + geom_bar()
+```
+
+21b) bar graph of marital, with response overlay
+```{r}
+ggplot(bank_train, aes(marital)) +
+    geom_bar(aes(fill = response))
+```
+
+21c) normalized bar graph of marital, with response overlay
+```{r}
+ggplot(bank_train, aes(previous_outcome)) +
+    geom_bar(aes(fill = response), position = "fill")
+```
+
+23) contingency table of marital and response
+```{r}
+t.v1 <- table(bank_train$response, bank_train$marital)
+t.v2 <- addmargins(A = t.v1, FUN = list(total = sum), quiet = TRUE)
+t.v2
+```
+
+```{r}
+#show column proportions
+round(prop.table(t.v1, margin = 2)*100, 1)
+```
+
+25a) histogram of duration
+```{r}
+ggplot(bank_train, aes(duration)) + geom_histogram(color="black")
+```
+
+25b) histogram of duration with response overlay
+```{r}
+ggplot(bank_train, aes(duration)) +
+    geom_histogram(aes(fill =response), color="black")
+```
+
+25c) normalized histogram of duration with response overlay
+```{r}
+ggplot(bank_train, aes(age)) +
+    geom_histogram(aes(fill = response), color="black", position = "fill")
+```
+
+
+### Data Science Using Python and R: Chapter 6 #14,15,16,17. For the following exercises, work with the adult_ch6_training and adult_ch6_test data sets.
+
+Read in training and test set
+```{r} 
+adult_train <- read.csv(file = "adult_ch6_training")
+adult_test <- read.csv(file = "adult_ch6_test")
+head(adult_train,5)
+```
+```{r}
+head(adult_test, 5)
+```
+
+14) CART model using the training set
+
+```{r}
+#change categorical variables to factors
+adult_train$Income <- factor(adult_train$Income)
+adult_train$Marital.status <- factor(adult_train$Marital.status)
+
+#load necessary packages
+library(rpart)
+library(rpart.plot)
+
+#use rpart() command to build CART model
+cart01 <- rpart(formula = Income ~Marital.status + Cap_Gains_Losses,
+                data = adult_train, method = "class")
+
+#show CART model
+rpart.plot(cart01)
+```
+
+15) CART model using the test set
+```{r}
+#change categorical variables to factors
+adult_test$Income <- factor(adult_test$Income)
+adult_test$Marital.status <- factor(adult_test$Marital.status)
+
+#use rpart() command to build CART model
+cart02 <- rpart(formula = Income ~ Marital.status + Cap_Gains_Losses,
+                data = adult_test, method = "class")
+
+#show CART model
+rpart.plot(cart02)
+```
+
+16) C5.0 model using the training set. Specify a minimum of 75 cases per terminal node. 
+```{r}
+#load necessary packages
+library(C50)
+
+#build C5.0 model
+C5 <- C5.0(formula = Income ~ Marital.status + Cap_Gains_Losses, data = adult_train,
+           control = C5.0Control(minCases=75))
+
+#visualize tree
+plot(C5)
+```
+
+
+### Data Science Using Python and R: Chapter 11 #34,35,36,37,38,39,40,41. For the following exercises, work with the bank_reg_training and the bank_reg_test data sets.
+
+Load in training and test set
+```{r}
+bankreg_train <- read.csv(file = "bank_reg_training")
+bankreg_test <- read.csv(file = "bank_reg_test")
+```
+
+34) Use the training set to run a regression predicting Credit Score, based on Debt-to-Income Ratio and Request Amount. Obtain a summary of the model.
+```{r}
+model01 <- lm(formula = Credit.Score ~ Debt.to.Income.Ratio + Request.Amount, data = bankreg_train)
+summary(model01)
+```
+
+35) Validate the model from the previous exercise
+```{r}
+model01_test <- lm(formula = Credit.Score ~ Debt.to.Income.Ratio + Request.Amount, data = bankreg_test)
+summary(model01_test)
+```
+39) Find and interpret the value of s
+The standard error, s, is given in the model summary above. 
+
+41) Find MAE_baseline and MAE_regression 
+```{r}
+#define predicted and actual values
+X_test <- data.frame(Debt.to.Income.Ratio = bankreg_test$Debt.to.Income.Ratio, 
+                     Request.Amount = bankreg_test$Request.Amount)
+ypred <- predict(object = model01, newdata = X_test)
+ytrue <-bankreg_test$Credit.Score
+
+#load necessary library
+library(MLmetrics)
+
+#calculate MAE_regression
+MAE(y_pred =ypred, y_true = ytrue)
+
+```
+```{r}
+#define predicted and actual values
+X <- data.frame(Debt.to.Income.Ratio = bankreg_train$Debt.to.Income.Ratio, 
+                     Request.Amount = bankreg_train$Request.Amount)
+ypred <- predict(object = model01, newdata = X)
+ytrue <-bankreg_train$Credit.Score
+
+#calculate MAE_baseline
+MAE(y_pred =ypred, y_true = ytrue)
+
+```
+
